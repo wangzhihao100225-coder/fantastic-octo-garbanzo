@@ -1,22 +1,39 @@
-name: Build SideStore
+name: Build SideStore 0b072e3
 on: workflow_dispatch
 
 jobs:
   build:
-    runs-on: macos-14
+    # 用最新macOS镜像，支持你的项目文件格式
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: 安装基础工具
+      # 安装必须的签名工具
+      - name: Install ldid
         run: brew install ldid
 
-      - name: 编译生成IPA
-        run: make build fakesign ipa
-
-      - name: 上传IPA文件
+      # 直接用项目原生命令编译（适配你的workspace）
+      - name: Build & Sign & IPA
+        run: |
+          xcodebuild archive -archivePath build/SideStore \
+            -workspace AltStore.xcworkspace \
+            -scheme SideStore \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+          
+          # 生成IPA
+          mkdir -p build/ipa/Payload
+          cp -r build/SideStore.xcarchive/Products/Applications/SideStore.app build/ipa/Payload/
+          cd build/ipa
+          zip -r SideStore.ipa Payload
+      
+      # 上传IPA
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: SideStore.ipa
-          path: build/ipa/*.ipa
+          path: build/ipa/SideStore.ipa
