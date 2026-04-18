@@ -3,14 +3,33 @@ on: workflow_dispatch
 jobs:
   build:
     runs-on: macos-14
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 强制用 Node 24，消除警告
     steps:
       - uses: actions/checkout@v4
         with: {submodules: recursive}
+      
       - uses: maxim-lobanov/setup-xcode@v1
         with: {xcode-version: '16.2'}
-      - run: brew install cocoapods rustup
-      - run: pod install
-      - run: make build fakesign ipa
+      
+      - name: Install deps
+        run: |
+          brew install cocoapods
+          rustup-init -y  # 初始化 Rust
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      
+      - name: Pod install
+        run: pod install
+      
+      - name: Build (verbose)
+        run: |
+          export BUILD_CONFIG=Release
+          make -j$(sysctl -n hw.ncpu) build  # 并行编译，快一点
+      
+      - name: Fakesign & IPA
+        run: |
+          make fakesign ipa
+      
       - uses: actions/upload-artifact@v4
         with:
           name: SideStore.ipa
