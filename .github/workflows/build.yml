@@ -4,7 +4,7 @@ jobs:
   build:
     runs-on: macos-14
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 强制用 Node 24，消除警告
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with: {submodules: recursive}
@@ -14,21 +14,14 @@ jobs:
       
       - name: Install deps
         run: |
-          brew install cocoapods
-          rustup-init -y  # 初始化 Rust
+          brew install make
+          rustup-init -y
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       
-      - name: Pod install
-        run: pod install
-      
-      - name: Build (verbose)
+      - name: Build & IPA
         run: |
           export BUILD_CONFIG=Release
-          make -j$(sysctl -n hw.ncpu) build  # 并行编译，快一点
-      
-      - name: Fakesign & IPA
-        run: |
-          make fakesign ipa
+          make build fakesign ipa
       
       - uses: actions/upload-artifact@v4
         with:
